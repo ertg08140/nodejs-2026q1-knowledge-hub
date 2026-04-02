@@ -1,12 +1,8 @@
 import { Exclude } from 'class-transformer';
 import {
-  IsEmail,
   IsEnum,
-  IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
-  MinLength,
 } from 'class-validator';
 
 export enum UserRole {
