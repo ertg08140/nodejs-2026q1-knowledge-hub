@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
-import { ArticleStatus, CreateArticleDto, UpdateArticleDto } from './dto/article.dto';
+import { ArticleQueryDto, ArticleStatus, CreateArticleDto, UpdateArticleDto } from './dto/article.dto';
 import { ArticleService } from './article.service';
 import { ApiQuery } from '@nestjs/swagger';
 import { Order, SortDto } from '../commonDto/sortQueryDto';
@@ -21,8 +21,8 @@ export class ArticleController {
     @ApiQuery({ name: 'tag', type: String, required: false })
     @ApiQuery({ name: 'sortBy', type: String, required: false })
     @ApiQuery({ name: 'order', enum: Order, required: false })
-    findAll(@Query('status') status: string, @Query('categoryId') categoryId: string, @Query('tag') tag: string, @Query() query: SortDto) {
-        const { sortBy, order } = query;
+    findAll(@Query() query?: ArticleQueryDto) {
+        const { status, categoryId, tag, sortBy, order } = query;
         return this.articleService.findAll(status, categoryId, tag, sortBy, order)
     }
 

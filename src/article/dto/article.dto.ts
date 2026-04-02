@@ -8,6 +8,7 @@ import {
     IsString,
     IsUUID,
 } from 'class-validator';
+import { SortDto } from '../../commonDto/sortQueryDto';
 
 
 
@@ -54,3 +55,21 @@ export class CreateArticleDto {
 }
 
 export class UpdateArticleDto extends PartialType(CreateArticleDto) { }
+
+export class ArticleQueryDto extends SortDto {
+    @IsOptional()
+    @IsEnum(ArticleStatus, {
+        message: `$value is incorrect Should provide correct role - ${Object.values(ArticleStatus).join(', ')}`,
+    })
+    status?: string;
+
+    @IsOptional()
+    @IsString()
+    @IsUUID()
+    categoryId?: string;
+
+    @IsOptional()
+    @IsString()
+    tag?: string;
+
+}
