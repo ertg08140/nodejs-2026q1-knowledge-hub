@@ -1,7 +1,9 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, UseInterceptors } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto, UserResponseDto, UpdatePasswordDto } from './dto/user.dto';
 import { plainToInstance } from 'class-transformer';
+import { ApiBody, ApiQuery } from '@nestjs/swagger';
+import { Order, SortDto } from '../commonDto/sortQueryDto';
 
 @Controller('user')
 export class UsersController {
@@ -9,14 +11,18 @@ export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
     @Post()
+    @ApiBody({ type: CreateUserDto })
     create(@Body() createUserDto: CreateUserDto) {
         const user = this.usersService.create(createUserDto)
         return plainToInstance(UserResponseDto, user);
     }
 
     @Get()
-    findAll() {
-        return this.usersService.findAll()
+    @ApiQuery({ name: 'sortBy', type: String, required: false })
+    @ApiQuery({ name: 'order', enum: Order, required: false })
+    findAll(@Query() query: SortDto) {
+        const { sortBy, order } = query;
+        return this.usersService.findAll(sortBy, order)
     }
 
     @Get(':id')

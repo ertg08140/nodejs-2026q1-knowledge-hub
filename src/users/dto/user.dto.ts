@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 import {
   IsEnum,
@@ -13,11 +14,14 @@ export enum UserRole {
 
 export class CreateUserDto {
   @IsString()
+  @ApiProperty()
   readonly login: string;
 
   @IsString()
+  @ApiProperty()
   readonly password: string;
 
+  @ApiProperty()
   @IsOptional()
   @IsEnum(UserRole, {
     message: `$value is incorrect Should provide correct role - ${Object.values(UserRole).join(', ')}`,
@@ -34,9 +38,11 @@ export class UserResponseDto {
 
 
 export class UpdatePasswordDto {
+  @ApiProperty()
   @IsString()
   readonly oldPassword: string;
 
+  @ApiProperty()
   @IsString()
   readonly newPassword: string;
 }

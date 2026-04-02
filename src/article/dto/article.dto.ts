@@ -1,5 +1,6 @@
 
 import { PartialType } from '@nestjs/mapped-types';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
     IsArray,
     IsEnum,
@@ -17,27 +18,34 @@ export enum ArticleStatus {
 }
 
 export class CreateArticleDto {
+    @ApiProperty()
     @IsString()
     readonly title: string;
 
+    @ApiProperty()
     @IsString()
     readonly content: string;
 
+    @ApiPropertyOptional({ enum: ArticleStatus, default: ArticleStatus.DRAFT })
     @IsOptional()
     @IsEnum(ArticleStatus, {
         message: `$value is incorrect Should provide correct role - ${Object.values(ArticleStatus).join(', ')}`,
     })
     status: ArticleStatus = ArticleStatus.DRAFT;
 
+    @ApiPropertyOptional({ nullable: true })
     @IsOptional()
     @IsString()
     @IsUUID()
     readonly authorId?: string | null;
 
+    @ApiPropertyOptional({ nullable: true })
     @IsOptional()
     @IsString()
-    readonly categoryId?: string;
+    @IsUUID()
+    readonly categoryId?: string | null;
 
+    @ApiPropertyOptional({ type: [String] })
     @IsOptional()
     @IsArray()
     @IsString({ each: true })

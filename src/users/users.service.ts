@@ -1,12 +1,17 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto, UpdatePasswordDto } from './dto/user.dto';
 import { randomUUID } from 'node:crypto';
-
+import { ArticleService } from '../article/article.service'
+import { CommentService } from '../comment/comment.service'
+import { Order } from '../commonDto/sortQueryDto';
 
 @Injectable()
 export class UsersService {
 
     private usersDb = [];
+
+    constructor(private readonly articleService: ArticleService, private readonly commentService: CommentService) { }
+
 
     create(createUserDto: CreateUserDto) {
 
@@ -21,8 +26,16 @@ export class UsersService {
         return user;
     }
 
-    findAll() {
-        return this.usersDb;
+    findAll(sortBy?: string, order?: Order) {
+        return this.usersDb.sort((a, b) => {
+            if (sortBy) {
+                const aValue = a[sortBy];
+                const bValue = b[sortBy];
+                if (aValue < bValue) return order === 'asc' ? -1 : 1;
+                if (aValue > bValue) return order === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
     }
 
     findOne(id: string) {
@@ -52,6 +65,13 @@ export class UsersService {
 
     delete(id: string) {
         const user = this.findOne(id)
+        const articles = this.articleService.findAll()
+        articles.forEach((article) => {
+            if (article.authorId === id) {
+                this.articleService.update(article.id, { authorId: null })
+            }
+        })
+        this.commentService.deleteCommentsByAuthorId(id)
         this.usersDb = this.usersDb.filter(user => user.id !== id)
 
     }

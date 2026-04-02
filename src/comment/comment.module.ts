@@ -1,11 +1,12 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { CommentController } from './comment.controller';
 import { CommentService } from './comment.service';
 import { ArticleModule } from '../article/article.module';
 
 @Module({
-  imports: [ArticleModule],
+  imports: [forwardRef(() => ArticleModule)],
   controllers: [CommentController],
-  providers: [CommentService]
+  providers: [CommentService],
+  exports: [CommentService],
 })
 export class CommentModule { }

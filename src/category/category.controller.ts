@@ -1,6 +1,8 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CategoryDto, UpdateCategoryDto } from './dto/category.dto';
+import { ApiQuery } from '@nestjs/swagger';
+import { Order, SortDto } from '../commonDto/sortQueryDto';
 
 @Controller('category')
 export class CategoryController {
@@ -14,8 +16,11 @@ export class CategoryController {
     }
 
     @Get()
-    findAll() {
-        return this.categoryService.findAll()
+    @ApiQuery({ name: 'sortBy', type: String, required: false })
+    @ApiQuery({ name: 'order', enum: Order, required: false })
+    findAll(@Query() query: SortDto) {
+        const { sortBy, order } = query;
+        return this.categoryService.findAll(sortBy, order)
     }
 
     @Get(':id')
