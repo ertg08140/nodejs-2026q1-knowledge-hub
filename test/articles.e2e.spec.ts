@@ -49,6 +49,26 @@ describe('Article (e2e)', () => {
   });
 
   describe('CUSTOM TESTS - GET (pagination and sorting)', () => {
+    beforeAll(async () => {
+      // Clean up any existing test articles
+      const allArticles = await unauthorizedRequest
+        .get(articlesRoutes.getAll)
+        .set(commonHeaders);
+
+      if (allArticles.body && Array.isArray(allArticles.body)) {
+        for (const article of allArticles.body) {
+          if (
+            article.title.includes('TEST_ARTICLE') ||
+            article.title.includes('SORT_ARTICLE')
+          ) {
+            await unauthorizedRequest
+              .delete(articlesRoutes.delete(article.id))
+              .set(commonHeaders);
+          }
+        }
+      }
+    });
+
     it('should correctly paginate articles with page and limit', async () => {
       // Create multiple articles
       const articleIds: string[] = [];
@@ -58,7 +78,7 @@ describe('Article (e2e)', () => {
           .post(articlesRoutes.create)
           .set(commonHeaders)
           .send({ ...createArticleDto, title: `TEST_ARTICLE_${i}` });
-        console.log('creationResponse', creationResponse.statusCode, i);
+
         expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
         articleIds.push(creationResponse.body.id);
       }

@@ -7,6 +7,6 @@ import { CommentModule } from '../comment/comment.module';
   imports: [forwardRef(() => CommentModule)],
   controllers: [ArticleController],
   providers: [ArticleService],
-  exports: [ArticleService]
+  exports: [ArticleService],
 })
-export class ArticleModule { }
+export class ArticleModule {}

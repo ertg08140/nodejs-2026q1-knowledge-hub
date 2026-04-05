@@ -1,10 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
-import {
-  IsEnum,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -30,12 +26,9 @@ export class CreateUserDto {
 }
 
 export class UserResponseDto {
-
   @Exclude()
   password: string;
-
 }
-
 
 export class UpdatePasswordDto {
   @ApiProperty()

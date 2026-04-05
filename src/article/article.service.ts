@@ -51,8 +51,6 @@ export class ArticleService {
 
   findOne(id: string) {
     const article = this.findArticleById(id);
-    console.log('articleDB', this.articleDb);
-    console.log('article', article);
     if (!article) throw new NotFoundException('Article Not Found');
 
     return article;

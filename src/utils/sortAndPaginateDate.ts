@@ -15,10 +15,7 @@ export const sortAndPaginateData = (
     return 0;
   });
 
-  console.log('sorted', sortedData);
-  console.log('page', page, limit);
   if (page && limit) {
-    console.log('page', page, limit);
     return {
       total: sortedData.length,
       page,

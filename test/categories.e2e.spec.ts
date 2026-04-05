@@ -41,6 +41,26 @@ describe('Category (e2e)', () => {
   });
 
   describe('CUSTOM TESTS - GET (pagination and sorting)', () => {
+    beforeAll(async () => {
+      // Clean up any existing test categories
+      const allCategories = await unauthorizedRequest
+        .get(categoriesRoutes.getAll)
+        .set(commonHeaders);
+
+      if (allCategories.body && Array.isArray(allCategories.body)) {
+        for (const category of allCategories.body) {
+          if (
+            category.name.includes('TEST_CATEGORY') ||
+            category.name.includes('SORT_CATEGORY')
+          ) {
+            await unauthorizedRequest
+              .delete(categoriesRoutes.delete(category.id))
+              .set(commonHeaders);
+          }
+        }
+      }
+    });
+
     it('should correctly paginate categories with page and limit', async () => {
       // Create multiple categories
       const categoryIds: string[] = [];
@@ -50,7 +70,7 @@ describe('Category (e2e)', () => {
           .post(categoriesRoutes.create)
           .set(commonHeaders)
           .send({ ...createCategoryDto, name: `TEST_CATEGORY_${i}` });
-        console.log('creationResponse', creationResponse.statusCode, i);
+
         expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
         categoryIds.push(creationResponse.body.id);
       }

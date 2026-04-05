@@ -41,6 +41,26 @@ describe('Users (e2e)', () => {
   });
 
   describe('CUSTOM TESTS - GET (pagination and sorting)', () => {
+    beforeAll(async () => {
+      // Clean up any existing test users
+      const allUsers = await unauthorizedRequest
+        .get(usersRoutes.getAll)
+        .set(commonHeaders);
+
+      if (allUsers.body && Array.isArray(allUsers.body)) {
+        for (const user of allUsers.body) {
+          if (
+            user.login.includes('TEST_LOGIN') ||
+            user.login.includes('SORT_LOGIN')
+          ) {
+            await unauthorizedRequest
+              .delete(usersRoutes.delete(user.id))
+              .set(commonHeaders);
+          }
+        }
+      }
+    });
+
     it('should correctly paginate users with page and limit', async () => {
       // Create multiple users
       const userIds: string[] = [];
@@ -50,7 +70,7 @@ describe('Users (e2e)', () => {
           .post(usersRoutes.create)
           .set(commonHeaders)
           .send({ ...createUserDto, login: `TEST_LOGIN_${i}` });
-        console.log('creationResponse', creationResponse.statusCode, i);
+
         expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
         userIds.push(creationResponse.body.id);
       }
