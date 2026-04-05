@@ -6,11 +6,7 @@ import {
   shouldAuthorizationBeTested,
   removeTokenUser,
 } from './utils';
-import {
-  articlesRoutes,
-  categoriesRoutes,
-  commentsRoutes,
-} from './endpoints';
+import { articlesRoutes, categoriesRoutes, commentsRoutes } from './endpoints';
 
 const createArticleDto = {
   title: 'TEST_ARTICLE',
@@ -50,6 +46,87 @@ describe('Article (e2e)', () => {
     if (commonHeaders['Authorization']) {
       delete commonHeaders['Authorization'];
     }
+  });
+
+  describe('CUSTOM TESTS - GET (pagination and sorting)', () => {
+    it('should correctly paginate articles with page and limit', async () => {
+      // Create multiple articles
+      const articleIds: string[] = [];
+
+      for (let i = 0; i < 5; i++) {
+        const creationResponse = await unauthorizedRequest
+          .post(articlesRoutes.create)
+          .set(commonHeaders)
+          .send({ ...createArticleDto, title: `TEST_ARTICLE_${i}` });
+        console.log('creationResponse', creationResponse.statusCode, i);
+        expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
+        articleIds.push(creationResponse.body.id);
+      }
+
+      // Test pagination: page 1 with limit 2
+      const response1 = await unauthorizedRequest
+        .get(`${articlesRoutes.getAll}?page=1&limit=2`)
+        .set(commonHeaders);
+
+      expect(response1.status).toBe(StatusCodes.OK);
+      expect(response1.body.data).toBeInstanceOf(Array);
+      expect(response1.body.data.length).toBeLessThanOrEqual(2);
+
+      // Test pagination: page 2 with limit 2
+      const response2 = await unauthorizedRequest
+        .get(`${articlesRoutes.getAll}?page=2&limit=2`)
+        .set(commonHeaders);
+
+      expect(response2.status).toBe(StatusCodes.OK);
+      expect(response2.body.data).toBeInstanceOf(Array);
+
+      // Cleanup
+      for (const id of articleIds) {
+        await unauthorizedRequest
+          .delete(articlesRoutes.delete(id))
+          .set(commonHeaders);
+      }
+    });
+
+    it('should correctly sort articles by title in ascending and descending order', async () => {
+      // Create multiple articles
+      const articleIds: string[] = [];
+
+      for (let i = 0; i < 3; i++) {
+        const creationResponse = await unauthorizedRequest
+          .post(articlesRoutes.create)
+          .set(commonHeaders)
+          .send({ ...createArticleDto, title: `SORT_ARTICLE_${i}` });
+
+        expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
+        articleIds.push(creationResponse.body.id);
+      }
+
+      // Test sorting in ascending order
+      const responseAsc = await unauthorizedRequest
+        .get(`${articlesRoutes.getAll}?sortBy=title&order=asc`)
+        .set(commonHeaders);
+
+      expect(responseAsc.status).toBe(StatusCodes.OK);
+      expect(responseAsc.body).toBeInstanceOf(Array);
+      expect(responseAsc.body[0].title).toEqual('SORT_ARTICLE_0');
+
+      // Test sorting in descending order
+      const responseDesc = await unauthorizedRequest
+        .get(`${articlesRoutes.getAll}?sortBy=title&order=desc`)
+        .set(commonHeaders);
+
+      expect(responseDesc.status).toBe(StatusCodes.OK);
+      expect(responseDesc.body).toBeInstanceOf(Array);
+      expect(responseDesc.body[0].title).toEqual('SORT_ARTICLE_2');
+
+      // Cleanup
+      for (const id of articleIds) {
+        await unauthorizedRequest
+          .delete(articlesRoutes.delete(id))
+          .set(commonHeaders);
+      }
+    });
   });
 
   describe('GET', () => {
@@ -116,7 +193,11 @@ describe('Article (e2e)', () => {
       const publishedArticle = await unauthorizedRequest
         .post(articlesRoutes.create)
         .set(commonHeaders)
-        .send({ ...createArticleDto, title: 'PUBLISHED_ARTICLE', status: 'published' });
+        .send({
+          ...createArticleDto,
+          title: 'PUBLISHED_ARTICLE',
+          status: 'published',
+        });
 
       expect(publishedArticle.status).toBe(StatusCodes.CREATED);
       const { id: publishedId } = publishedArticle.body;
@@ -135,8 +216,12 @@ describe('Article (e2e)', () => {
       expect(hasPublished).toBe(false);
 
       // Cleanup
-      await unauthorizedRequest.delete(articlesRoutes.delete(draftId)).set(commonHeaders);
-      await unauthorizedRequest.delete(articlesRoutes.delete(publishedId)).set(commonHeaders);
+      await unauthorizedRequest
+        .delete(articlesRoutes.delete(draftId))
+        .set(commonHeaders);
+      await unauthorizedRequest
+        .delete(articlesRoutes.delete(publishedId))
+        .set(commonHeaders);
     });
 
     it('should correctly filter articles by categoryId', async () => {
@@ -172,15 +257,23 @@ describe('Article (e2e)', () => {
       expect(response.body).toBeInstanceOf(Array);
 
       const hasWithCat = response.body.some((a) => a.id === articleWithCatId);
-      const hasWithoutCat = response.body.some((a) => a.id === articleWithoutCatId);
+      const hasWithoutCat = response.body.some(
+        (a) => a.id === articleWithoutCatId,
+      );
 
       expect(hasWithCat).toBe(true);
       expect(hasWithoutCat).toBe(false);
 
       // Cleanup
-      await unauthorizedRequest.delete(articlesRoutes.delete(articleWithCatId)).set(commonHeaders);
-      await unauthorizedRequest.delete(articlesRoutes.delete(articleWithoutCatId)).set(commonHeaders);
-      await unauthorizedRequest.delete(categoriesRoutes.delete(categoryId)).set(commonHeaders);
+      await unauthorizedRequest
+        .delete(articlesRoutes.delete(articleWithCatId))
+        .set(commonHeaders);
+      await unauthorizedRequest
+        .delete(articlesRoutes.delete(articleWithoutCatId))
+        .set(commonHeaders);
+      await unauthorizedRequest
+        .delete(categoriesRoutes.delete(categoryId))
+        .set(commonHeaders);
     });
 
     it('should correctly filter articles by tag', async () => {
@@ -214,8 +307,12 @@ describe('Article (e2e)', () => {
       expect(hasUntagged).toBe(false);
 
       // Cleanup
-      await unauthorizedRequest.delete(articlesRoutes.delete(tagArticleId)).set(commonHeaders);
-      await unauthorizedRequest.delete(articlesRoutes.delete(noTagArticleId)).set(commonHeaders);
+      await unauthorizedRequest
+        .delete(articlesRoutes.delete(tagArticleId))
+        .set(commonHeaders);
+      await unauthorizedRequest
+        .delete(articlesRoutes.delete(noTagArticleId))
+        .set(commonHeaders);
     });
   });
 
@@ -226,8 +323,17 @@ describe('Article (e2e)', () => {
         .set(commonHeaders)
         .send(createArticleDto);
 
-      const { id, title, content, status, authorId, categoryId, tags, createdAt, updatedAt } =
-        response.body;
+      const {
+        id,
+        title,
+        content,
+        status,
+        authorId,
+        categoryId,
+        tags,
+        createdAt,
+        updatedAt,
+      } = response.body;
 
       expect(response.status).toBe(StatusCodes.CREATED);
 
@@ -330,8 +436,14 @@ describe('Article (e2e)', () => {
         .get(articlesRoutes.getById(createdId))
         .set(commonHeaders);
 
-      const { id: updatedId, title, content, status, categoryId, tags } =
-        updatedArticleResponse.body;
+      const {
+        id: updatedId,
+        title,
+        content,
+        status,
+        categoryId,
+        tags,
+      } = updatedArticleResponse.body;
 
       expect(title).toBe(updatedTitle);
       expect(content).toBe(updatedContent);
@@ -342,8 +454,12 @@ describe('Article (e2e)', () => {
       expect(createdId).toBe(updatedId);
 
       // Cleanup
-      await unauthorizedRequest.delete(articlesRoutes.delete(createdId)).set(commonHeaders);
-      await unauthorizedRequest.delete(categoriesRoutes.delete(updateCategoryId)).set(commonHeaders);
+      await unauthorizedRequest
+        .delete(articlesRoutes.delete(createdId))
+        .set(commonHeaders);
+      await unauthorizedRequest
+        .delete(categoriesRoutes.delete(updateCategoryId))
+        .set(commonHeaders);
     });
 
     it('should respond with BAD_REQUEST status code in case of invalid id', async () => {

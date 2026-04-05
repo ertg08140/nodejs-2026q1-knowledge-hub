@@ -1,79 +1,74 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto, UpdatePasswordDto } from './dto/user.dto';
 import { randomUUID } from 'node:crypto';
-import { ArticleService } from '../article/article.service'
-import { CommentService } from '../comment/comment.service'
-import { Order } from '../commonDto/sortQueryDto';
+import { ArticleService } from '../article/article.service';
+import { CommentService } from '../comment/comment.service';
+import { PaginationSortQueryDto } from '../common/paginationQuery.Dto';
+import { sortAndPaginateData } from '../utils/sortAndPaginateDate';
 
 @Injectable()
 export class UsersService {
+  private usersDb = [];
 
-    private usersDb = [];
+  constructor(
+    private readonly articleService: ArticleService,
+    private readonly commentService: CommentService,
+  ) {}
 
-    constructor(private readonly articleService: ArticleService, private readonly commentService: CommentService) { }
+  create(createUserDto: CreateUserDto) {
+    const user = {
+      id: randomUUID(),
+      ...createUserDto,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
 
+    this.usersDb.push(user);
+    return user;
+  }
 
-    create(createUserDto: CreateUserDto) {
+  findAll(query: PaginationSortQueryDto) {
+    return sortAndPaginateData(this.usersDb, query);
+  }
 
-        const user = {
-            id: randomUUID(),
-            ...createUserDto,
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-        }
+  findOne(id: string) {
+    const user = this.usersDb.find((user) => user.id === id);
+    if (!user) throw new NotFoundException('User Not Found');
 
-        this.usersDb.push(user);
-        return user;
-    }
+    return user;
+  }
 
-    findAll(sortBy?: string, order?: Order) {
-        return this.usersDb.sort((a, b) => {
-            if (sortBy) {
-                const aValue = a[sortBy];
-                const bValue = b[sortBy];
-                if (aValue < bValue) return order === 'asc' ? -1 : 1;
-                if (aValue > bValue) return order === 'asc' ? 1 : -1;
-            }
-            return 0;
-        });
-    }
+  updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
+    const user = this.findOne(id);
 
-    findOne(id: string) {
-        const user = this.usersDb.find(user => user.id === id);
-        if (!user) throw new NotFoundException('User Not Found');
+    if (user.password !== updatePasswordDto.oldPassword)
+      throw new ForbiddenException('Incorrect password');
 
-        return user;
-    }
+    const updatedUser = {
+      ...user,
+      password: updatePasswordDto.newPassword,
+      updatedAt: Date.now(),
+    };
 
-    updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
-        const user = this.findOne(id)
+    this.usersDb = this.usersDb.map((user) => {
+      if (user.id === id && user.password === updatePasswordDto.oldPassword) {
+        return updatedUser;
+      }
+      return user;
+    });
 
-        if (user.password !== updatePasswordDto.oldPassword) throw new ForbiddenException('Incorrect password')
+    return this.findOne(id);
+  }
 
-        const updatedUser = { ...user, password: updatePasswordDto.newPassword, updatedAt: Date.now() }
+  delete(id: string) {
+    this.findOne(id);
+    this.articleService.deleteUserFromArticle(id);
 
-        this.usersDb = this.usersDb.map(user => {
-            if (user.id === id && user.password === updatePasswordDto.oldPassword) {
-                return updatedUser
-            }
-            return user
-        })
-
-        return this.findOne(id)
-
-    }
-
-    delete(id: string) {
-        const user = this.findOne(id)
-        const articles = this.articleService.findAll()
-        articles.forEach((article) => {
-            if (article.authorId === id) {
-                this.articleService.update(article.id, { authorId: null })
-            }
-        })
-        this.commentService.deleteCommentsByAuthorId(id)
-        this.usersDb = this.usersDb.filter(user => user.id !== id)
-
-    }
-
+    this.commentService.deleteCommentsByAuthorId(id);
+    this.usersDb = this.usersDb.filter((user) => user.id !== id);
+  }
 }

@@ -6,6 +6,6 @@ import { ArticleModule } from '../article/article.module';
 @Module({
   imports: [ArticleModule],
   controllers: [CategoryController],
-  providers: [CategoryService]
+  providers: [CategoryService],
 })
-export class CategoryModule { }
+export class CategoryModule {}

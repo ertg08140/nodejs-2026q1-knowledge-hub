@@ -9,4 +9,4 @@ import { ArticleModule } from '../article/article.module';
   providers: [CommentService],
   exports: [CommentService],
 })
-export class CommentModule { }
+export class CommentModule {}

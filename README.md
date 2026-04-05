@@ -20,7 +20,8 @@ npm install
 ## Running application
 
 ```
-npm start
+npm start - prod
+npm start:dev - development
 ```
 
 After starting the app on port (4000 as default) you can open
@@ -75,6 +76,19 @@ npm run lint
 
 ```
 npm run format
+```
+
+### Endpoints
+
+All the endpoints and query parameters can be found in the swagger at /doc
+
+All get all endpoints support following optional Query parameter
+
+```
+ApiQuery({ name: 'sortBy', type: String, required: false }),
+ApiQuery({ name: 'order', enum: Order, required: false }),
+ApiQuery({ name: 'page', type: Number, required: false }),
+ApiQuery({ name: 'limit', type: Number, required: false }),
 ```
 
 ### Debugging in VSCode

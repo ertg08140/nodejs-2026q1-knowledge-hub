@@ -1,83 +1,100 @@
-import { forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateArticleDto, UpdateArticleDto } from './dto/article.dto';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  ArticleQueryDto,
+  CreateArticleDto,
+  UpdateArticleDto,
+} from './dto/article.dto';
 import { randomUUID } from 'crypto';
 import { CommentService } from '../comment/comment.service';
-import { Order } from '../commonDto/sortQueryDto';
+import { sortAndPaginateData } from 'src/utils/sortAndPaginateDate';
 
 @Injectable()
 export class ArticleService {
+  private articleDb = [];
+  constructor(
+    @Inject(forwardRef(() => CommentService))
+    private readonly commentService: CommentService,
+  ) {}
 
-    private articleDb = [];
-    constructor(
-        @Inject(forwardRef(() => CommentService))
-        private readonly commentService: CommentService,
-    ) { }
+  create(createArticleDto: CreateArticleDto) {
+    const article = {
+      id: randomUUID(),
+      ...createArticleDto,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
 
-    create(createArticleDto: CreateArticleDto) {
+    this.articleDb.push(article);
+    return article;
+  }
 
-        const article = {
-            id: randomUUID(),
-            ...createArticleDto,
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+  findAll(query?: ArticleQueryDto) {
+    const { status, categoryId, tag } = query;
+    const filteredData = this.articleDb.filter(
+      (article) =>
+        (status && article.status === status) ||
+        (categoryId && article.categoryId === categoryId) ||
+        (tag && article.tags.includes(tag)) ||
+        (!status && !categoryId && !tag),
+    );
+    return sortAndPaginateData(filteredData, query);
+  }
 
-        }
+  findArticleById(id: string) {
+    return this.articleDb.find((article) => article.id === id);
+  }
 
-        this.articleDb.push(article);
-        return article;
-    }
+  findOne(id: string) {
+    const article = this.findArticleById(id);
+    console.log('articleDB', this.articleDb);
+    console.log('article', article);
+    if (!article) throw new NotFoundException('Article Not Found');
 
-    findAll(status?: string, categoryId?: string, tag?: string, sortBy?: string, order?: Order) {
+    return article;
+  }
 
-        return this.articleDb.filter(article =>
-            (status && article.status === status) ||
-            (categoryId && article.categoryId === categoryId) ||
-            (tag && article.tags.includes(tag)) ||
-            (!status && !categoryId && !tag)
-        ).sort((a, b) => {
-            if (sortBy) {
-                const aValue = a[sortBy];
-                const bValue = b[sortBy];
-                if (aValue < bValue) return order === 'asc' ? -1 : 1;
-                if (aValue > bValue) return order === 'asc' ? 1 : -1;
-            }
-            return 0;
-        });
-    }
+  update(id: string, updateArticleDto: UpdateArticleDto) {
+    const article = this.findOne(id);
 
-    findArticleById(id: string) {
-        return this.articleDb.find(article => article.id === id);
-    }
+    const updatedArticle = {
+      ...article,
+      ...updateArticleDto,
+      updatedAt: Date.now(),
+    };
 
-    findOne(id: string) {
-        const article = this.findArticleById(id);
-        console.log('articleDB', this.articleDb)
-        console.log('article', article)
-        if (!article) throw new NotFoundException('Article Not Found');
+    this.articleDb = this.articleDb.map((article) => {
+      if (article.id === id) {
+        return updatedArticle;
+      }
+      return article;
+    });
 
-        return article;
-    }
+    return this.findOne(id);
+  }
 
-    update(id: string, updateArticleDto: UpdateArticleDto) {
-        const article = this.findOne(id)
+  delete(id: string) {
+    this.findOne(id);
+    this.commentService.deleteCommentsByArticleId(id);
+    this.articleDb = this.articleDb.filter((article) => article.id !== id);
+  }
 
-        const updatedArticle = { ...article, ...updateArticleDto, updatedAt: Date.now() }
-
-        this.articleDb = this.articleDb.map(article => {
-            if (article.id === id) {
-                return updatedArticle
-            }
-            return article
-        })
-
-        return this.findOne(id)
-
-    }
-
-    delete(id: string) {
-        const article = this.findOne(id)
-        this.commentService.deleteCommentsByArticleId(id)
-        this.articleDb = this.articleDb.filter(article => article.id !== id)
-
-    }
+  deleteCategoryFromArticle(categoryId: string) {
+    this.articleDb.forEach((article) => {
+      if (article.categoryId === categoryId) {
+        article.categoryId = null;
+      }
+    });
+  }
+  deleteUserFromArticle(authorId: string) {
+    this.articleDb.forEach((article) => {
+      if (article.authorId === authorId) {
+        article.authorId = null;
+      }
+    });
+  }
 }

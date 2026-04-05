@@ -1,75 +1,57 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { CategoryDto, UpdateCategoryDto } from './dto/category.dto';
-import { ArticleService } from '../article/article.service'
-import { Order } from '../commonDto/sortQueryDto';
+import { ArticleService } from '../article/article.service';
 
+import { PaginationSortQueryDto } from '../common/paginationQuery.Dto';
+import { sortAndPaginateData } from '../utils/sortAndPaginateDate';
 
 @Injectable()
 export class CategoryService {
+  private categoryDb = [];
 
-    private categoryDb = [];
+  constructor(private readonly articleService: ArticleService) {}
 
-    constructor(private readonly articleService: ArticleService) { }
+  create(categoryDto: CategoryDto) {
+    const category = {
+      id: randomUUID(),
+      ...categoryDto,
+    };
 
-    create(categoryDto: CategoryDto) {
+    this.categoryDb.push(category);
+    return category;
+  }
 
-        const category = {
-            id: randomUUID(),
-            ...categoryDto,
+  findAll(query?: PaginationSortQueryDto) {
+    return sortAndPaginateData(this.categoryDb, query);
+  }
 
-        }
+  findOne(id: string) {
+    const category = this.categoryDb.find((category) => category.id === id);
+    if (!category) throw new NotFoundException('Category Not Found');
 
-        this.categoryDb.push(category);
-        return category;
-    }
+    return category;
+  }
 
-    findAll(sortBy?: string, order?: Order) {
-        return this.categoryDb.sort((a, b) => {
-            if (sortBy) {
-                const aValue = a[sortBy];
-                const bValue = b[sortBy];
-                if (aValue < bValue) return order === 'asc' ? -1 : 1;
-                if (aValue > bValue) return order === 'asc' ? 1 : -1;
-            }
-            return 0;
-        });
-    }
+  update(id: string, updateCategoryDto: UpdateCategoryDto) {
+    const category = this.findOne(id);
 
-    findOne(id: string) {
-        const category = this.categoryDb.find(category => category.id === id);
-        if (!category) throw new NotFoundException('Category Not Found');
+    const updatedCategory = { ...category, ...updateCategoryDto };
 
-        return category;
-    }
+    this.categoryDb = this.categoryDb.map((category) => {
+      if (category.id === id) {
+        return updatedCategory;
+      }
+      return category;
+    });
 
-    update(id: string, updateCategoryDto: UpdateCategoryDto) {
-        const category = this.findOne(id)
+    return this.findOne(id);
+  }
 
-        const updatedCategory = { ...category, ...updateCategoryDto, }
+  delete(id: string) {
+    this.findOne(id);
+    this.articleService.deleteCategoryFromArticle(id);
 
-        this.categoryDb = this.categoryDb.map(category => {
-            if (category.id === id) {
-                return updatedCategory
-            }
-            return category
-        })
-
-        return this.findOne(id)
-
-    }
-
-    delete(id: string) {
-        const category = this.findOne(id)
-        const articles = this.articleService.findAll()
-        articles.forEach((article) => {
-            if (article.categoryId === id) {
-                this.articleService.update(article.id, { categoryId: null })
-            }
-        })
-
-        this.categoryDb = this.categoryDb.filter(category => category.id !== id)
-
-    }
-
+    this.categoryDb = this.categoryDb.filter((category) => category.id !== id);
+  }
 }
