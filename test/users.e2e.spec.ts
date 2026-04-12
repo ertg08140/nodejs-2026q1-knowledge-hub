@@ -6,11 +6,7 @@ import {
   shouldAuthorizationBeTested,
   removeTokenUser,
 } from './utils';
-import {
-  usersRoutes,
-  articlesRoutes,
-  commentsRoutes,
-} from './endpoints';
+import { usersRoutes, articlesRoutes, commentsRoutes } from './endpoints';
 
 const createUserDto = {
   login: 'TEST_LOGIN',
@@ -42,6 +38,107 @@ describe('Users (e2e)', () => {
     if (commonHeaders['Authorization']) {
       delete commonHeaders['Authorization'];
     }
+  });
+
+  describe('CUSTOM TESTS - GET (pagination and sorting)', () => {
+    beforeAll(async () => {
+      // Clean up any existing test users
+      const allUsers = await unauthorizedRequest
+        .get(usersRoutes.getAll)
+        .set(commonHeaders);
+
+      if (allUsers.body && Array.isArray(allUsers.body)) {
+        for (const user of allUsers.body) {
+          if (
+            user.login.includes('TEST_LOGIN') ||
+            user.login.includes('SORT_LOGIN')
+          ) {
+            await unauthorizedRequest
+              .delete(usersRoutes.delete(user.id))
+              .set(commonHeaders);
+          }
+        }
+      }
+    });
+
+    it('should correctly paginate users with page and limit', async () => {
+      // Create multiple users
+      const userIds: string[] = [];
+
+      for (let i = 0; i < 5; i++) {
+        const creationResponse = await unauthorizedRequest
+          .post(usersRoutes.create)
+          .set(commonHeaders)
+          .send({ ...createUserDto, login: `TEST_LOGIN_${i}` });
+
+        expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
+        userIds.push(creationResponse.body.id);
+      }
+
+      // Test pagination: page 1 with limit 2
+      const response1 = await unauthorizedRequest
+        .get(`${usersRoutes.getAll}?page=1&limit=2`)
+        .set(commonHeaders);
+
+      expect(response1.status).toBe(StatusCodes.OK);
+      expect(response1.body.data).toBeInstanceOf(Array);
+      expect(response1.body.data.length).toBeLessThanOrEqual(2);
+
+      // Test pagination: page 2 with limit 2
+      const response2 = await unauthorizedRequest
+        .get(`${usersRoutes.getAll}?page=2&limit=2`)
+        .set(commonHeaders);
+
+      expect(response2.status).toBe(StatusCodes.OK);
+      expect(response2.body.data).toBeInstanceOf(Array);
+
+      // Cleanup
+      for (const id of userIds) {
+        await unauthorizedRequest
+          .delete(usersRoutes.delete(id))
+          .set(commonHeaders);
+      }
+    });
+
+    it('should correctly sort users by login in ascending and descending order', async () => {
+      // Create multiple users
+      const userIds: string[] = [];
+
+      for (let i = 0; i < 3; i++) {
+        const creationResponse = await unauthorizedRequest
+          .post(usersRoutes.create)
+          .set(commonHeaders)
+          .send({ ...createUserDto, login: `SORT_LOGIN_${i}` });
+
+        expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
+        userIds.push(creationResponse.body.id);
+      }
+
+      // Test sorting in ascending order
+      const responseAsc = await unauthorizedRequest
+        .get(`${usersRoutes.getAll}?sortBy=login&order=asc`)
+        .set(commonHeaders);
+
+      expect(responseAsc.status).toBe(StatusCodes.OK);
+      expect(responseAsc.body).toBeInstanceOf(Array);
+      expect(responseAsc.body[0].login).toEqual('SORT_LOGIN_0');
+
+      // Test sorting in descending order
+      const responseDesc = await unauthorizedRequest
+        .get(`${usersRoutes.getAll}?sortBy=login&order=desc`)
+        .set(commonHeaders);
+
+      expect(responseDesc.status).toBe(StatusCodes.OK);
+      expect(responseDesc.body).toBeInstanceOf(Array);
+      expect(responseDesc.body[0].login).toEqual('SORT_LOGIN_2');
+
+      // Cleanup
+      for (const id of userIds) {
+        await unauthorizedRequest
+          .delete(usersRoutes.delete(id))
+          .set(commonHeaders);
+      }
+    });
   });
 
   describe('GET', () => {

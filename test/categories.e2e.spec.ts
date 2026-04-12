@@ -40,6 +40,107 @@ describe('Category (e2e)', () => {
     }
   });
 
+  describe('CUSTOM TESTS - GET (pagination and sorting)', () => {
+    beforeAll(async () => {
+      // Clean up any existing test categories
+      const allCategories = await unauthorizedRequest
+        .get(categoriesRoutes.getAll)
+        .set(commonHeaders);
+
+      if (allCategories.body && Array.isArray(allCategories.body)) {
+        for (const category of allCategories.body) {
+          if (
+            category.name.includes('TEST_CATEGORY') ||
+            category.name.includes('SORT_CATEGORY')
+          ) {
+            await unauthorizedRequest
+              .delete(categoriesRoutes.delete(category.id))
+              .set(commonHeaders);
+          }
+        }
+      }
+    });
+
+    it('should correctly paginate categories with page and limit', async () => {
+      // Create multiple categories
+      const categoryIds: string[] = [];
+
+      for (let i = 0; i < 5; i++) {
+        const creationResponse = await unauthorizedRequest
+          .post(categoriesRoutes.create)
+          .set(commonHeaders)
+          .send({ ...createCategoryDto, name: `TEST_CATEGORY_${i}` });
+
+        expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
+        categoryIds.push(creationResponse.body.id);
+      }
+
+      // Test pagination: page 1 with limit 2
+      const response1 = await unauthorizedRequest
+        .get(`${categoriesRoutes.getAll}?page=1&limit=2`)
+        .set(commonHeaders);
+
+      expect(response1.status).toBe(StatusCodes.OK);
+      expect(response1.body.data).toBeInstanceOf(Array);
+      expect(response1.body.data.length).toBeLessThanOrEqual(2);
+
+      // Test pagination: page 2 with limit 2
+      const response2 = await unauthorizedRequest
+        .get(`${categoriesRoutes.getAll}?page=2&limit=2`)
+        .set(commonHeaders);
+
+      expect(response2.status).toBe(StatusCodes.OK);
+      expect(response2.body.data).toBeInstanceOf(Array);
+
+      // Cleanup
+      for (const id of categoryIds) {
+        await unauthorizedRequest
+          .delete(categoriesRoutes.delete(id))
+          .set(commonHeaders);
+      }
+    });
+
+    it('should correctly sort categories by name in ascending and descending order', async () => {
+      // Create multiple categories
+      const categoryIds: string[] = [];
+
+      for (let i = 0; i < 3; i++) {
+        const creationResponse = await unauthorizedRequest
+          .post(categoriesRoutes.create)
+          .set(commonHeaders)
+          .send({ ...createCategoryDto, name: `SORT_CATEGORY_${i}` });
+
+        expect(creationResponse.statusCode).toBe(StatusCodes.CREATED);
+        categoryIds.push(creationResponse.body.id);
+      }
+
+      // Test sorting in ascending order
+      const responseAsc = await unauthorizedRequest
+        .get(`${categoriesRoutes.getAll}?sortBy=name&order=asc`)
+        .set(commonHeaders);
+
+      expect(responseAsc.status).toBe(StatusCodes.OK);
+      expect(responseAsc.body).toBeInstanceOf(Array);
+      expect(responseAsc.body[0].name).toEqual('SORT_CATEGORY_0');
+
+      // Test sorting in descending order
+      const responseDesc = await unauthorizedRequest
+        .get(`${categoriesRoutes.getAll}?sortBy=name&order=desc`)
+        .set(commonHeaders);
+
+      expect(responseDesc.status).toBe(StatusCodes.OK);
+      expect(responseDesc.body).toBeInstanceOf(Array);
+      expect(responseDesc.body[0].name).toEqual('SORT_CATEGORY_2');
+
+      // Cleanup
+      for (const id of categoryIds) {
+        await unauthorizedRequest
+          .delete(categoriesRoutes.delete(id))
+          .set(commonHeaders);
+      }
+    });
+  });
+
   describe('GET', () => {
     it('should correctly get all categories', async () => {
       const response = await unauthorizedRequest
@@ -168,8 +269,7 @@ describe('Category (e2e)', () => {
         .get(categoriesRoutes.getById(createdId))
         .set(commonHeaders);
 
-      const { id: updatedId, name, description } =
-        updatedCategoryResponse.body;
+      const { id: updatedId, name, description } = updatedCategoryResponse.body;
 
       expect(name).toBe(createCategoryDto.name);
       expect(description).toBe(updatedDescription);
