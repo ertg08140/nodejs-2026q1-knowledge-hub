@@ -8,20 +8,23 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Knowledge Hub API')
-    .setDescription('The Knowledge Hub allows users to create, edit, and organize articles by categories and tags.')
+    .setDescription(
+      'The Knowledge Hub allows users to create, edit, and organize articles by categories and tags.',
+    )
     .setVersion('1.0')
     .build();
-
 
   const document = SwaggerModule.createDocument(app, config);
 
   SwaggerModule.setup('doc', app, document);
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
-  await app.listen(4000);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  await app.listen(process.env.PORT);
 }
 bootstrap();
