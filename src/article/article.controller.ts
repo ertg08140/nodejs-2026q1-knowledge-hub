@@ -13,21 +13,25 @@ import {
 } from '@nestjs/common';
 import {
   ArticleQueryDto,
-  ArticleStatus,
   CreateArticleDto,
   UpdateArticleDto,
 } from './dto/article.dto';
 import { ArticleService } from './article.service';
 import { ApiQuery } from '@nestjs/swagger';
 import { ApiSortingPagination } from '../common/apiQuery';
+import { ArticleStatus } from 'generated/prisma/client';
 
 @Controller('article')
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Post()
-  create(@Body() createArticleDto: CreateArticleDto) {
-    return this.articleService.create(createArticleDto);
+  async create(@Body() createArticleDto: CreateArticleDto) {
+    const article = await this.articleService.create(createArticleDto);
+    return {
+      ...article,
+      status: article.status.toLowerCase(),
+    };
   }
 
   @Get()
@@ -35,12 +39,21 @@ export class ArticleController {
   @ApiQuery({ name: 'categoryId', type: String, required: false })
   @ApiQuery({ name: 'tag', type: String, required: false })
   @ApiSortingPagination()
-  findAll(@Query() query?: ArticleQueryDto) {
-    return this.articleService.findAll(query);
+  async findAll(@Query() query?: ArticleQueryDto) {
+    const result = await this.articleService.findAll(query);
+    const transformedData = result?.data.map((article) => ({
+      ...article,
+      status: article.status.toLowerCase(),
+    }));
+    if (result && Array.isArray(result.data) && result.page && result.limit) {
+      return { ...result, data: transformedData };
+    }
+
+    return transformedData;
   }
 
   @Get(':id')
-  findOne(
+  async findOne(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -52,11 +65,15 @@ export class ArticleController {
     )
     id: string,
   ) {
-    return this.articleService.findOne(id);
+    const article = await this.articleService.findOne(id);
+    return {
+      ...article,
+      status: article.status.toLowerCase(),
+    };
   }
 
   @Put(':id')
-  update(
+  async update(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -69,12 +86,12 @@ export class ArticleController {
     id: string,
     @Body() updateArticleDto: UpdateArticleDto,
   ) {
-    return this.articleService.update(id, updateArticleDto);
+    return await this.articleService.update(id, updateArticleDto);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  delete(
+  async delete(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -86,7 +103,7 @@ export class ArticleController {
     )
     id: string,
   ) {
-    this.articleService.delete(id);
+    await this.articleService.delete(id);
     return;
   }
 }

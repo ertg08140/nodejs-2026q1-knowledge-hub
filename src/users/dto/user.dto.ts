@@ -1,12 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-
-export enum UserRole {
-  ADMIN = 'admin',
-  EDITOR = 'editor',
-  VIEWER = 'viewer',
-}
+import { UserRole } from '../../../generated/prisma/client';
 
 export class CreateUserDto {
   @IsString()
@@ -26,6 +21,20 @@ export class CreateUserDto {
 }
 
 export class UserResponseDto {
+  @Expose()
+  id: string;
+
+  @Expose()
+  login: string;
+
+  @Expose()
+  role: UserRole;
+  @Expose()
+  createdAt: number;
+
+  @Expose()
+  updatedAt: number;
+
   @Exclude()
   password: string;
 }

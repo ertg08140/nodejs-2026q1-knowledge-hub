@@ -18,12 +18,12 @@ export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
   @Post()
-  create(@Body() createCommentDto: CreateCommentDto) {
-    return this.commentService.create(createCommentDto);
+  async create(@Body() createCommentDto: CreateCommentDto) {
+    return await this.commentService.create(createCommentDto);
   }
 
   @Get()
-  findComment(
+  async findComment(
     @Query(
       'articleId',
       new ParseUUIDPipe({
@@ -35,11 +35,11 @@ export class CommentController {
     )
     articleId: string,
   ) {
-    return this.commentService.findComment(articleId);
+    return await this.commentService.findComment(articleId);
   }
 
   @Get(':id')
-  findOne(
+  async findOne(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -51,12 +51,12 @@ export class CommentController {
     )
     id: string,
   ) {
-    return this.commentService.findOne(id);
+    return await this.commentService.findOne(id);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  delete(
+  async delete(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -68,7 +68,7 @@ export class CommentController {
     )
     id: string,
   ) {
-    this.commentService.delete(id);
+    await this.commentService.delete(id);
     return;
   }
 }

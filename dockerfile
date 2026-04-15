@@ -21,9 +21,20 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 
+COPY prisma ./prisma/ 
+COPY prisma.config.ts /usr/src/app/prisma.config.ts
+
 RUN npm ci --omit=dev
 
 COPY --from=builder /usr/src/app/dist ./dist
+
+
+RUN npx prisma generate  
+
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
 EXPOSE 4000
 

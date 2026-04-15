@@ -25,3 +25,12 @@ export const sortAndPaginateData = (
   }
   return sortedData;
 };
+
+export const sortAndPaginatePrismaData = (query: PaginationSortQueryDto) => {
+  const { page, limit, sortBy, order } = query;
+  return {
+    skip: page && limit ? (page - 1) * limit : undefined,
+    take: limit ? Number(limit) : undefined,
+    orderBy: sortBy && { [sortBy]: order || 'desc' },
+  };
+};

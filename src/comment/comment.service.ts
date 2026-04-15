@@ -1,66 +1,72 @@
 import {
-  forwardRef,
-  Inject,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { CreateCommentDto } from './dto/comment.dto';
-import { ArticleService } from '../article/article.service';
+import { PrismaService } from 'prisma/prisma.service';
+import { Prisma } from 'generated/prisma/client';
 
 @Injectable()
 export class CommentService {
-  private commentDb = [];
+  constructor(private prisma: PrismaService) {}
 
-  constructor(
-    @Inject(forwardRef(() => ArticleService))
-    private readonly articleService: ArticleService,
-  ) {}
-  create(createCommentDto: CreateCommentDto) {
-    const article = this.articleService.findArticleById(
-      createCommentDto.articleId,
-    );
+  async create(createCommentDto: CreateCommentDto) {
+    const { authorId, articleId, ...rest } = createCommentDto;
 
-    if (!article) throw new UnprocessableEntityException('No such article');
+    try {
+      return await this.prisma.comment.create({
+        data: {
+          ...rest,
+          ...(authorId ? { author: { connect: { id: authorId } } } : undefined),
+          ...(articleId
+            ? { article: { connect: { id: articleId } } }
+            : undefined),
+          createdAt: Math.floor(Date.now() / 1000),
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new UnprocessableEntityException(
+            `Incorrect authorId or articleId provided. Please ensure they exist.`,
+          );
+        }
+      }
 
-    const comment = {
-      id: randomUUID(),
-      ...createCommentDto,
-      createdAt: Date.now(),
-    };
-
-    this.commentDb.push(comment);
-    return comment;
+      throw new InternalServerErrorException('Error creating comment');
+    }
   }
 
-  findComment(articleId: string) {
-    return this.commentDb.filter((comment) => comment.articleId === articleId);
+  async findComment(articleId: string) {
+    return await this.prisma.comment.findMany({
+      where: { articleId },
+    });
   }
 
-  findOne(id: string) {
-    const comment = this.commentDb.find((comment) => comment.id === id);
+  async findOne(id: string) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id },
+    });
 
     if (!comment) throw new NotFoundException('Comment Not Found');
 
     return comment;
   }
 
-  delete(id: string) {
-    const comment = this.commentDb.find((comment) => comment.id === id);
-    if (!comment) throw new NotFoundException('Comment Not Found');
-    this.commentDb = this.commentDb.filter((comment) => comment.id !== id);
-  }
-
-  deleteCommentsByAuthorId(authorId: string) {
-    this.commentDb = this.commentDb.filter(
-      (comment) => comment.authorId !== authorId,
-    );
-  }
-
-  deleteCommentsByArticleId(articleId: string) {
-    this.commentDb = this.commentDb.filter(
-      (comment) => comment.articleId !== articleId,
-    );
+  async delete(id: string) {
+    try {
+      return await this.prisma.comment.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(
+            `Not Found: Comment with id ${id} does not exist`,
+          );
+        }
+      }
+      throw new InternalServerErrorException('Error deleting comment');
+    }
   }
 }

@@ -1,57 +1,87 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CategoryDto, UpdateCategoryDto } from './dto/category.dto';
-import { ArticleService } from '../article/article.service';
-
-import { PaginationSortQueryDto } from '../common/paginationQuery.Dto';
-import { sortAndPaginateData } from '../utils/sortAndPaginateDate';
+import { sortAndPaginatePrismaData } from '../utils/sortAndPaginateDate';
+import { PrismaService } from 'prisma/prisma.service';
+import { Prisma } from 'generated/prisma/client';
+import { PaginationSortQueryDto } from 'src/common/paginationQuery.Dto';
 
 @Injectable()
 export class CategoryService {
-  private categoryDb = [];
+  constructor(private prisma: PrismaService) {}
 
-  constructor(private readonly articleService: ArticleService) {}
+  async create(categoryDto: CategoryDto) {
+    try {
+      return await this.prisma.category.create({
+        data: {
+          ...categoryDto,
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error creating category');
+    }
+  }
 
-  create(categoryDto: CategoryDto) {
-    const category = {
-      id: randomUUID(),
-      ...categoryDto,
+  async findAll(query?: PaginationSortQueryDto) {
+    const { page, limit } = query;
+
+    const [items, total] = await Promise.all([
+      this.prisma.category.findMany(sortAndPaginatePrismaData(query)),
+      this.prisma.category.count(),
+    ]);
+
+    return {
+      data: items,
+      total,
+      page,
+      limit,
     };
-
-    this.categoryDb.push(category);
-    return category;
   }
 
-  findAll(query?: PaginationSortQueryDto) {
-    return sortAndPaginateData(this.categoryDb, query);
-  }
-
-  findOne(id: string) {
-    const category = this.categoryDb.find((category) => category.id === id);
+  async findOne(id: string) {
+    const category = await this.prisma.category.findUnique({
+      where: { id },
+    });
     if (!category) throw new NotFoundException('Category Not Found');
 
     return category;
   }
 
-  update(id: string, updateCategoryDto: UpdateCategoryDto) {
-    const category = this.findOne(id);
-
-    const updatedCategory = { ...category, ...updateCategoryDto };
-
-    this.categoryDb = this.categoryDb.map((category) => {
-      if (category.id === id) {
-        return updatedCategory;
+  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
+    try {
+      return await this.prisma.category.update({
+        where: { id },
+        data: {
+          ...updateCategoryDto,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(
+            `Not Found: Category with id ${id} does not exist`,
+          );
+        }
       }
-      return category;
-    });
-
-    return this.findOne(id);
+      throw new InternalServerErrorException('Error updating category');
+    }
   }
 
-  delete(id: string) {
-    this.findOne(id);
-    this.articleService.deleteCategoryFromArticle(id);
-
-    this.categoryDb = this.categoryDb.filter((category) => category.id !== id);
+  async delete(id: string) {
+    try {
+      return await this.prisma.category.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(
+            `Not Found: Category with id ${id} does not exist`,
+          );
+        }
+      }
+      throw new InternalServerErrorException('Error deleting category');
+    }
   }
 }
