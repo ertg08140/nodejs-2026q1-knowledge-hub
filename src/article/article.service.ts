@@ -97,7 +97,7 @@ export class ArticleService {
         take: limit ? Number(limit) : undefined,
         orderBy: sortBy ? { [sortBy]: order || 'desc' } : { createdAt: 'desc' },
       }),
-      this.prisma.article.count({ where }), // Считаем общее кол-во для фронтенда
+      this.prisma.article.count({ where }),
     ]);
 
     return {
