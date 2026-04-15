@@ -51,7 +51,7 @@ async function main() {
     );
 
     // Create categories
-    console.log('📚 Creating categories...');
+    console.log('Creating categories...');
     const categoryTechnology = await prisma.category.create({
       data: {
         name: 'Technology',
@@ -76,7 +76,7 @@ async function main() {
       },
     });
 
-    console.log(`✅ Created categories: Technology, Business, Lifestyle`);
+    console.log(`Created categories: Technology, Business, Lifestyle`);
 
     // Create tags
     console.log('Creating tags...');
@@ -88,7 +88,7 @@ async function main() {
       prisma.tag.create({ data: { name: 'Database' } }),
     ]);
 
-    console.log(`✅ Created tags: ${tags.map((t) => t.name).join(', ')}`);
+    console.log(`Created tags: ${tags.map((t) => t.name).join(', ')}`);
 
     // Create articles with different statuses
     console.log('Creating articles...');
@@ -167,7 +167,7 @@ async function main() {
     );
 
     // Create comments
-    console.log('💬 Creating comments...');
+    console.log('Creating comments...');
     await prisma.comment.create({
       data: {
         content:
