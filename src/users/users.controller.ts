@@ -10,6 +10,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import {
@@ -21,8 +22,12 @@ import { plainToInstance } from 'class-transformer';
 import { ApiBody } from '@nestjs/swagger';
 import { ApiSortingPagination } from '../common/apiQuery';
 import { PaginationSortQueryDto } from 'src/common/paginationQuery.Dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { UserRole } from 'generated/prisma/client';
 
 @Controller('user')
+@UseGuards(AuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -36,6 +41,7 @@ export class UsersController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN)
   @ApiSortingPagination()
   async findAll(@Query() query: PaginationSortQueryDto) {
     const result = await this.usersService.findAll(query);
@@ -56,6 +62,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard)
   async findOne(
     @Param(
       'id',
@@ -76,6 +83,7 @@ export class UsersController {
   }
 
   @Put(':id')
+  @UseGuards(AuthGuard)
   async updatePassword(
     @Param(
       'id',
@@ -94,6 +102,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
   @HttpCode(204)
   async delete(
     @Param(

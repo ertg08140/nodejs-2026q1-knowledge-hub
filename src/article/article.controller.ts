@@ -10,6 +10,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ArticleQueryDto,
@@ -20,12 +21,14 @@ import { ArticleService } from './article.service';
 import { ApiQuery } from '@nestjs/swagger';
 import { ApiSortingPagination } from '../common/apiQuery';
 import { ArticleStatus } from 'generated/prisma/client';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('article')
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Post()
+  @UseGuards(AuthGuard)
   async create(@Body() createArticleDto: CreateArticleDto) {
     const article = await this.articleService.create(createArticleDto);
     return {
@@ -35,6 +38,7 @@ export class ArticleController {
   }
 
   @Get()
+  @UseGuards(AuthGuard)
   @ApiQuery({ name: 'status', enum: ArticleStatus, required: false })
   @ApiQuery({ name: 'categoryId', type: String, required: false })
   @ApiQuery({ name: 'tag', type: String, required: false })
@@ -53,6 +57,7 @@ export class ArticleController {
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard)
   async findOne(
     @Param(
       'id',
@@ -73,6 +78,7 @@ export class ArticleController {
   }
 
   @Put(':id')
+  @UseGuards(AuthGuard)
   async update(
     @Param(
       'id',
@@ -90,6 +96,7 @@ export class ArticleController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
   @HttpCode(204)
   async delete(
     @Param(

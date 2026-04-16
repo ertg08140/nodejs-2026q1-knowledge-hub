@@ -10,22 +10,26 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CategoryDto, UpdateCategoryDto } from './dto/category.dto';
 import { PaginationSortQueryDto } from '../common/paginationQuery.Dto';
 import { ApiSortingPagination } from '../common/apiQuery';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('category')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Post()
+  @UseGuards(AuthGuard)
   async create(@Body() categoryDto: CategoryDto) {
     return await this.categoryService.create(categoryDto);
   }
 
   @Get()
+  @UseGuards(AuthGuard)
   @ApiSortingPagination()
   async findAll(@Query() query: PaginationSortQueryDto) {
     const result = await this.categoryService.findAll(query);
@@ -38,6 +42,7 @@ export class CategoryController {
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard)
   async findOne(
     @Param(
       'id',
@@ -54,6 +59,7 @@ export class CategoryController {
   }
 
   @Put(':id')
+  @UseGuards(AuthGuard)
   async update(
     @Param(
       'id',
@@ -71,6 +77,7 @@ export class CategoryController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
   @HttpCode(204)
   async delete(
     @Param(
