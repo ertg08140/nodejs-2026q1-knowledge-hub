@@ -1,98 +1,191 @@
 import {
-  forwardRef,
-  Inject,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import {
   ArticleQueryDto,
   CreateArticleDto,
   UpdateArticleDto,
 } from './dto/article.dto';
-import { randomUUID } from 'crypto';
-import { CommentService } from '../comment/comment.service';
-import { sortAndPaginateData } from 'src/utils/sortAndPaginateDate';
+
+import { PrismaService } from 'prisma/prisma.service';
+import { ArticleStatus, Prisma } from 'generated/prisma/client';
 
 @Injectable()
 export class ArticleService {
-  private articleDb = [];
-  constructor(
-    @Inject(forwardRef(() => CommentService))
-    private readonly commentService: CommentService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
-  create(createArticleDto: CreateArticleDto) {
-    const article = {
-      id: randomUUID(),
-      ...createArticleDto,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+  private transformTags(article: any) {
+    if (!article) return article;
+    if (Array.isArray(article)) {
+      return article.map((a) => ({
+        ...a,
+        tags: a.tags?.map((t: any) => t.name) || [],
+      }));
+    }
+    return {
+      ...article,
+      tags: article.tags?.map((t: any) => t.name) || [],
+    };
+  }
+
+  async create(createArticleDto: CreateArticleDto) {
+    const { authorId, categoryId, tags, ...rest } = createArticleDto;
+
+    try {
+      const article = await this.prisma.article.create({
+        data: {
+          ...rest,
+          author: authorId ? { connect: { id: authorId } } : undefined,
+          category: categoryId ? { connect: { id: categoryId } } : undefined,
+          tags: {
+            connectOrCreate: tags?.map((tagName) => ({
+              where: { name: tagName },
+              create: { name: tagName },
+            })),
+          },
+          updatedAt: Math.floor(Date.now() / 1000),
+          createdAt: Math.floor(Date.now() / 1000),
+        },
+        include: {
+          author: true,
+          category: true,
+          tags: true,
+        },
+      });
+      return this.transformTags(article);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new UnprocessableEntityException(
+            `Incorrect authorId, categoryId or tag id provided. Please ensure they exist.`,
+          );
+        }
+      }
+
+      throw new InternalServerErrorException('Error creating article');
+    }
+  }
+
+  async findAll(query?: ArticleQueryDto) {
+    const { status, categoryId, tag, page, limit, sortBy, order } = query || {};
+
+    const where: Prisma.ArticleWhereInput = {
+      status: status as ArticleStatus,
+      categoryId: categoryId || undefined,
+      tags: tag
+        ? {
+            some: {
+              name: tag,
+            },
+          }
+        : undefined,
     };
 
-    this.articleDb.push(article);
-    return article;
+    const [items, total] = await Promise.all([
+      this.prisma.article.findMany({
+        where,
+        include: {
+          author: true,
+          category: true,
+          tags: true,
+        },
+
+        skip: page && limit ? (page - 1) * limit : undefined,
+        take: limit ? Number(limit) : undefined,
+        orderBy: sortBy ? { [sortBy]: order || 'desc' } : { createdAt: 'desc' },
+      }),
+      this.prisma.article.count({ where }),
+    ]);
+
+    return {
+      data: this.transformTags(items),
+      total,
+      page,
+      limit,
+    };
   }
 
-  findAll(query?: ArticleQueryDto) {
-    const { status, categoryId, tag } = query;
-    const filteredData = this.articleDb.filter(
-      (article) =>
-        (status && article.status === status) ||
-        (categoryId && article.categoryId === categoryId) ||
-        (tag && article.tags.includes(tag)) ||
-        (!status && !categoryId && !tag),
-    );
-    return sortAndPaginateData(filteredData, query);
+  async findArticleById(id: string) {
+    const article = await this.prisma.article.findFirst({
+      where: { id },
+      include: {
+        author: true,
+        category: true,
+        tags: true,
+      },
+    });
+    return this.transformTags(article);
   }
 
-  findArticleById(id: string) {
-    return this.articleDb.find((article) => article.id === id);
-  }
-
-  findOne(id: string) {
-    const article = this.findArticleById(id);
+  async findOne(id: string) {
+    const article = await this.findArticleById(id);
     if (!article) throw new NotFoundException('Article Not Found');
 
     return article;
   }
 
-  update(id: string, updateArticleDto: UpdateArticleDto) {
-    const article = this.findOne(id);
-
-    const updatedArticle = {
-      ...article,
-      ...updateArticleDto,
-      updatedAt: Date.now(),
-    };
-
-    this.articleDb = this.articleDb.map((article) => {
-      if (article.id === id) {
-        return updatedArticle;
+  async update(id: string, updateArticleDto: UpdateArticleDto) {
+    const { authorId, categoryId, tags, ...rest } = updateArticleDto;
+    try {
+      const article = await this.prisma.article.update({
+        where: { id },
+        data: {
+          ...rest,
+          author: authorId ? { connect: { id: authorId } } : undefined,
+          category: categoryId ? { connect: { id: categoryId } } : undefined,
+          tags: tags
+            ? {
+                connectOrCreate: tags.map((tagName) => ({
+                  where: { name: tagName },
+                  create: { name: tagName },
+                })),
+              }
+            : undefined,
+          updatedAt: Math.floor(Date.now() / 1000),
+        },
+        include: {
+          author: true,
+          category: true,
+          tags: true,
+        },
+      });
+      return this.transformTags(article);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(
+            `Not Found: Category with id ${id} does not exist`,
+          );
+        }
       }
-      return article;
-    });
-
-    return this.findOne(id);
+      throw new InternalServerErrorException('Error updating category');
+    }
   }
 
-  delete(id: string) {
-    this.findOne(id);
-    this.commentService.deleteCommentsByArticleId(id);
-    this.articleDb = this.articleDb.filter((article) => article.id !== id);
-  }
+  async delete(id: string) {
+    try {
+      const article = await this.prisma.article.delete({
+        where: { id },
+        include: {
+          author: true,
+          category: true,
+          tags: true,
+        },
+      });
+      return this.transformTags(article);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(
+            `Not Found: Article with id ${id} does not exist`,
+          );
+        }
+      }
 
-  deleteCategoryFromArticle(categoryId: string) {
-    this.articleDb.forEach((article) => {
-      if (article.categoryId === categoryId) {
-        article.categoryId = null;
-      }
-    });
-  }
-  deleteUserFromArticle(authorId: string) {
-    this.articleDb.forEach((article) => {
-      if (article.authorId === authorId) {
-        article.authorId = null;
-      }
-    });
+      throw new InternalServerErrorException('Error deleting article');
+    }
   }
 }

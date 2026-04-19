@@ -2,12 +2,8 @@ import { PartialType } from '@nestjs/mapped-types';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { PaginationSortQueryDto } from 'src/common/paginationQuery.Dto';
-
-export enum ArticleStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
-  ARCHIVED = 'archived',
-}
+import { ArticleStatus } from '../../../generated/prisma/client';
+import { Transform } from 'class-transformer';
 
 export class CreateArticleDto {
   @ApiProperty()
@@ -20,6 +16,9 @@ export class CreateArticleDto {
 
   @ApiPropertyOptional({ enum: ArticleStatus, default: ArticleStatus.DRAFT })
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toUpperCase() : value,
+  )
   @IsEnum(ArticleStatus, {
     message: `$value is incorrect Should provide correct role - ${Object.values(ArticleStatus).join(', ')}`,
   })
@@ -48,6 +47,9 @@ export class UpdateArticleDto extends PartialType(CreateArticleDto) {}
 
 export class ArticleQueryDto extends PaginationSortQueryDto {
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toUpperCase() : value,
+  )
   @IsEnum(ArticleStatus, {
     message: `$value is incorrect Should provide correct role - ${Object.values(ArticleStatus).join(', ')}`,
   })

@@ -96,3 +96,7 @@ ApiQuery({ name: 'limit', type: Number, required: false }),
 Press <kbd>F5</kbd> to debug.
 
 For more information, visit: https://code.visualstudio.com/docs/editor/debugging
+
+### Docker image link
+
+https://hub.docker.com/repository/docker/kirillkl/nest-app/general

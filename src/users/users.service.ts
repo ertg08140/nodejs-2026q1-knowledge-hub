@@ -1,74 +1,85 @@
 import {
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto, UpdatePasswordDto } from './dto/user.dto';
-import { randomUUID } from 'node:crypto';
-import { ArticleService } from '../article/article.service';
-import { CommentService } from '../comment/comment.service';
-import { PaginationSortQueryDto } from '../common/paginationQuery.Dto';
-import { sortAndPaginateData } from '../utils/sortAndPaginateDate';
+import { sortAndPaginatePrismaData } from '../utils/sortAndPaginateDate';
+import { PrismaService } from 'prisma/prisma.service';
+import { Prisma } from 'generated/prisma/client';
+import { PaginationSortQueryDto } from 'src/common/paginationQuery.Dto';
 
 @Injectable()
 export class UsersService {
-  private usersDb = [];
+  constructor(private prisma: PrismaService) {}
 
-  constructor(
-    private readonly articleService: ArticleService,
-    private readonly commentService: CommentService,
-  ) {}
+  async create(createUserDto: CreateUserDto) {
+    try {
+      return await this.prisma.user.create({
+        data: {
+          ...createUserDto,
+          updatedAt: Math.floor(Date.now() / 1000),
+          createdAt: Math.floor(Date.now() / 1000),
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error creating user');
+    }
+  }
 
-  create(createUserDto: CreateUserDto) {
-    const user = {
-      id: randomUUID(),
-      ...createUserDto,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+  async findAll(query: PaginationSortQueryDto) {
+    const { page, limit } = query;
+
+    const [items, total] = await Promise.all([
+      this.prisma.user.findMany(sortAndPaginatePrismaData(query)),
+      this.prisma.user.count(),
+    ]);
+
+    return {
+      data: items,
+      total,
+      page,
+      limit,
     };
-
-    this.usersDb.push(user);
-    return user;
   }
 
-  findAll(query: PaginationSortQueryDto) {
-    return sortAndPaginateData(this.usersDb, query);
-  }
-
-  findOne(id: string) {
-    const user = this.usersDb.find((user) => user.id === id);
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
     if (!user) throw new NotFoundException('User Not Found');
 
     return user;
   }
 
-  updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
-    const user = this.findOne(id);
+  async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
+    const user = await this.findOne(id);
 
     if (user.password !== updatePasswordDto.oldPassword)
       throw new ForbiddenException('Incorrect password');
 
-    const updatedUser = {
-      ...user,
-      password: updatePasswordDto.newPassword,
-      updatedAt: Date.now(),
-    };
-
-    this.usersDb = this.usersDb.map((user) => {
-      if (user.id === id && user.password === updatePasswordDto.oldPassword) {
-        return updatedUser;
-      }
-      return user;
+    return await this.prisma.user.update({
+      where: { id },
+      data: {
+        password: updatePasswordDto.newPassword,
+        updatedAt: Math.floor(Date.now() / 1000),
+      },
     });
-
-    return this.findOne(id);
   }
 
-  delete(id: string) {
-    this.findOne(id);
-    this.articleService.deleteUserFromArticle(id);
-
-    this.commentService.deleteCommentsByAuthorId(id);
-    this.usersDb = this.usersDb.filter((user) => user.id !== id);
+  async delete(id: string) {
+    try {
+      return await this.prisma.user.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(
+            `Not Found: User with id ${id} does not exist`,
+          );
+        }
+      }
+      throw new InternalServerErrorException('Error deleting user');
+    }
   }
 }

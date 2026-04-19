@@ -21,18 +21,24 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Post()
-  create(@Body() categoryDto: CategoryDto) {
-    return this.categoryService.create(categoryDto);
+  async create(@Body() categoryDto: CategoryDto) {
+    return await this.categoryService.create(categoryDto);
   }
 
   @Get()
   @ApiSortingPagination()
-  findAll(@Query() query: PaginationSortQueryDto) {
-    return this.categoryService.findAll(query);
+  async findAll(@Query() query: PaginationSortQueryDto) {
+    const result = await this.categoryService.findAll(query);
+
+    if (result && Array.isArray(result.data) && result.page && result.limit) {
+      return result;
+    }
+
+    return result.data;
   }
 
   @Get(':id')
-  findOne(
+  async findOne(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -44,11 +50,11 @@ export class CategoryController {
     )
     id: string,
   ) {
-    return this.categoryService.findOne(id);
+    return await this.categoryService.findOne(id);
   }
 
   @Put(':id')
-  update(
+  async update(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -61,12 +67,12 @@ export class CategoryController {
     id: string,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
-    return this.categoryService.update(id, updateCategoryDto);
+    return await this.categoryService.update(id, updateCategoryDto);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  delete(
+  async delete(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -78,7 +84,7 @@ export class CategoryController {
     )
     id: string,
   ) {
-    this.categoryService.delete(id);
+    await this.categoryService.delete(id);
     return;
   }
 }

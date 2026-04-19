@@ -28,19 +28,35 @@ export class UsersController {
 
   @Post()
   @ApiBody({ type: CreateUserDto })
-  create(@Body() createUserDto: CreateUserDto) {
-    const user = this.usersService.create(createUserDto);
-    return plainToInstance(UserResponseDto, user);
+  async create(@Body() createUserDto: CreateUserDto) {
+    const user = await this.usersService.create(createUserDto);
+
+    const transformedUser = { ...user, role: user.role.toLowerCase() };
+    return plainToInstance(UserResponseDto, transformedUser);
   }
 
   @Get()
   @ApiSortingPagination()
-  findAll(@Query() query: PaginationSortQueryDto) {
-    return this.usersService.findAll(query);
+  async findAll(@Query() query: PaginationSortQueryDto) {
+    const result = await this.usersService.findAll(query);
+    const transformedData = result?.data.map((user) => ({
+      ...user,
+      role: user.role.toLowerCase(),
+    }));
+    if (result && Array.isArray(result.data) && result.page && result.limit) {
+      result.data = plainToInstance(UserResponseDto, result.data, {
+        excludeExtraneousValues: true,
+      });
+      return { ...result, data: transformedData };
+    }
+
+    return plainToInstance(UserResponseDto, transformedData, {
+      excludeExtraneousValues: true,
+    });
   }
 
   @Get(':id')
-  findOne(
+  async findOne(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -52,11 +68,15 @@ export class UsersController {
     )
     id: string,
   ) {
-    return this.usersService.findOne(id);
+    const user = await this.usersService.findOne(id);
+    const transformedUser = { ...user, role: user.role.toLowerCase() };
+    return plainToInstance(UserResponseDto, transformedUser, {
+      excludeExtraneousValues: true,
+    });
   }
 
   @Put(':id')
-  updatePassword(
+  async updatePassword(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -75,7 +95,7 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(204)
-  delete(
+  async delete(
     @Param(
       'id',
       new ParseUUIDPipe({
@@ -87,7 +107,7 @@ export class UsersController {
     )
     id: string,
   ) {
-    this.usersService.delete(id);
+    await this.usersService.delete(id);
     return;
   }
 }
