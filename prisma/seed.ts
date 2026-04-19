@@ -2,11 +2,9 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
 
-const connectionString = `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}/${process.env.POSTGRES_DB}?schema=public`;
+const connectionString = `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@localhost:${process.env.POSTGRES_PORT}/${process.env.POSTGRES_DB}?schema=public`;
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
-
-console.log('url', connectionString);
 
 const prisma = new PrismaClient({ adapter });
 
@@ -26,7 +24,7 @@ async function main() {
       data: {
         login: 'admin',
         password: 'admin123',
-        role: 'ADMIN',
+        role: 'admin',
       },
     });
 
@@ -34,7 +32,7 @@ async function main() {
       data: {
         login: 'editor',
         password: 'editor123',
-        role: 'EDITOR',
+        role: 'editor',
       },
     });
 
@@ -42,7 +40,7 @@ async function main() {
       data: {
         login: 'viewer',
         password: 'viewer123',
-        role: 'VIEWER',
+        role: 'viewer',
       },
     });
 
@@ -97,7 +95,7 @@ async function main() {
         title: 'Getting Started with NestJS',
         content:
           'Learn how to build scalable server-side applications using NestJS framework.',
-        status: 'PUBLISHED',
+        status: 'published',
         authorId: editorUser.id,
         categoryId: categoryTechnology.id,
         tags: {
@@ -111,7 +109,7 @@ async function main() {
         title: 'TypeScript Best Practices',
         content:
           'Master TypeScript with these essential best practices and design patterns.',
-        status: 'PUBLISHED',
+        status: 'published',
         authorId: editorUser.id,
         categoryId: categoryTechnology.id,
         tags: {
@@ -125,7 +123,7 @@ async function main() {
         title: 'Building Reactive UIs with React',
         content:
           'Discover how to create modern, interactive user interfaces using React.',
-        status: 'PUBLISHED',
+        status: 'published',
         authorId: adminUser.id,
         categoryId: categoryTechnology.id,
         tags: {
@@ -139,7 +137,7 @@ async function main() {
         title: 'Startup Growth Strategies That Work',
         content:
           'Proven strategies for scaling your startup from zero to success.',
-        status: 'DRAFT',
+        status: 'draft',
         authorId: adminUser.id,
         categoryId: categoryBusiness.id,
         tags: {
@@ -153,7 +151,7 @@ async function main() {
         title: 'Wellness and Productivity in Remote Work',
         content:
           'Tips and tricks for maintaining health and productivity while working from home.',
-        status: 'ARCHIVED',
+        status: 'archived',
         authorId: editorUser.id,
         categoryId: categoryLifestyle.id,
         tags: {
@@ -163,7 +161,7 @@ async function main() {
     });
 
     console.log(
-      `Created 5 articles with different statuses (PUBLISHED, DRAFT, ARCHIVED)`,
+      `Created 5 articles with different statuses (published, draft, archived)`,
     );
 
     // Create comments

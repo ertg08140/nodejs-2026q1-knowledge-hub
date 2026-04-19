@@ -10,6 +10,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ArticleQueryDto,
@@ -19,19 +20,24 @@ import {
 import { ArticleService } from './article.service';
 import { ApiQuery } from '@nestjs/swagger';
 import { ApiSortingPagination } from '../common/apiQuery';
-import { ArticleStatus } from 'generated/prisma/client';
+import { ArticleStatus, UserRole } from 'generated/prisma/client';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { GetUser, UserPayload } from 'src/common/decorators/user.decorator';
 
 @Controller('article')
+@UseGuards(AuthGuard, RolesGuard)
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Post()
-  async create(@Body() createArticleDto: CreateArticleDto) {
-    const article = await this.articleService.create(createArticleDto);
-    return {
-      ...article,
-      status: article.status.toLowerCase(),
-    };
+  @Roles(UserRole.admin, UserRole.editor)
+  async create(
+    @Body() createArticleDto: CreateArticleDto,
+    @GetUser('userId') userId: string,
+  ) {
+    return await this.articleService.create(createArticleDto, userId);
   }
 
   @Get()
@@ -41,15 +47,11 @@ export class ArticleController {
   @ApiSortingPagination()
   async findAll(@Query() query?: ArticleQueryDto) {
     const result = await this.articleService.findAll(query);
-    const transformedData = result?.data.map((article) => ({
-      ...article,
-      status: article.status.toLowerCase(),
-    }));
     if (result && Array.isArray(result.data) && result.page && result.limit) {
-      return { ...result, data: transformedData };
+      return result;
     }
 
-    return transformedData;
+    return result?.data;
   }
 
   @Get(':id')
@@ -65,14 +67,11 @@ export class ArticleController {
     )
     id: string,
   ) {
-    const article = await this.articleService.findOne(id);
-    return {
-      ...article,
-      status: article.status.toLowerCase(),
-    };
+    return await this.articleService.findOne(id);
   }
 
   @Put(':id')
+  @Roles(UserRole.admin, UserRole.editor)
   async update(
     @Param(
       'id',
@@ -85,11 +84,13 @@ export class ArticleController {
     )
     id: string,
     @Body() updateArticleDto: UpdateArticleDto,
+    @GetUser() user: UserPayload,
   ) {
-    return await this.articleService.update(id, updateArticleDto);
+    return await this.articleService.update(id, updateArticleDto, user);
   }
 
   @Delete(':id')
+  @Roles(UserRole.admin, UserRole.editor)
   @HttpCode(204)
   async delete(
     @Param(
@@ -102,8 +103,9 @@ export class ArticleController {
       }),
     )
     id: string,
+    @GetUser() user: UserPayload,
   ) {
-    await this.articleService.delete(id);
+    await this.articleService.delete(id, user);
     return;
   }
 }

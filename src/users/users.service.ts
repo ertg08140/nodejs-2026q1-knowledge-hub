@@ -7,8 +7,9 @@ import {
 import { CreateUserDto, UpdatePasswordDto } from './dto/user.dto';
 import { sortAndPaginatePrismaData } from '../utils/sortAndPaginateDate';
 import { PrismaService } from 'prisma/prisma.service';
-import { Prisma } from 'generated/prisma/client';
+import { Prisma, UserRole } from 'generated/prisma/client';
 import { PaginationSortQueryDto } from 'src/common/paginationQuery.Dto';
+import { UserPayload } from 'src/common/decorators/user.decorator';
 
 @Injectable()
 export class UsersService {
@@ -24,7 +25,7 @@ export class UsersService {
         },
       });
     } catch (error) {
-      throw new InternalServerErrorException('Error creating user');
+      throw new ForbiddenException('Error creating user');
     }
   }
 
@@ -53,10 +54,22 @@ export class UsersService {
     return user;
   }
 
-  async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
-    const user = await this.findOne(id);
+  async updatePassword(
+    id: string,
+    user: UserPayload,
+    updatePasswordDto: UpdatePasswordDto,
+  ) {
+    const returnedUser = await this.findOne(id);
 
-    if (user.password !== updatePasswordDto.oldPassword)
+    if (!returnedUser) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    if (user.role !== UserRole.admin && returnedUser.id !== user.userId) {
+      throw new ForbiddenException('Forbidden resource');
+    }
+
+    if (returnedUser.password !== updatePasswordDto.oldPassword)
       throw new ForbiddenException('Incorrect password');
 
     return await this.prisma.user.update({

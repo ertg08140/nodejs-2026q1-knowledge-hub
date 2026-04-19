@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -11,7 +12,8 @@ import {
 } from './dto/article.dto';
 
 import { PrismaService } from 'prisma/prisma.service';
-import { ArticleStatus, Prisma } from 'generated/prisma/client';
+import { ArticleStatus, Prisma, UserRole } from 'generated/prisma/client';
+import { UserPayload } from 'src/common/decorators/user.decorator';
 
 @Injectable()
 export class ArticleService {
@@ -31,14 +33,17 @@ export class ArticleService {
     };
   }
 
-  async create(createArticleDto: CreateArticleDto) {
+  async create(createArticleDto: CreateArticleDto, userId: string) {
     const { authorId, categoryId, tags, ...rest } = createArticleDto;
 
     try {
       const article = await this.prisma.article.create({
         data: {
           ...rest,
-          author: authorId ? { connect: { id: authorId } } : undefined,
+          author:
+            authorId || userId
+              ? { connect: { id: authorId || userId } }
+              : undefined,
           category: categoryId ? { connect: { id: categoryId } } : undefined,
           tags: {
             connectOrCreate: tags?.map((tagName) => ({
@@ -127,8 +132,27 @@ export class ArticleService {
     return article;
   }
 
-  async update(id: string, updateArticleDto: UpdateArticleDto) {
+  async update(
+    id: string,
+    updateArticleDto: UpdateArticleDto,
+    user: UserPayload,
+  ) {
     const { authorId, categoryId, tags, ...rest } = updateArticleDto;
+    const existingArticle = await this.prisma.article.findUnique({
+      where: { id },
+      select: { authorId: true },
+    });
+
+    if (!existingArticle) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
+    }
+    if (
+      user.role === UserRole.viewer ||
+      existingArticle.authorId !== user.userId
+    ) {
+      throw new ForbiddenException('Forbidden resource');
+    }
+
     try {
       const article = await this.prisma.article.update({
         where: { id },
@@ -165,7 +189,21 @@ export class ArticleService {
     }
   }
 
-  async delete(id: string) {
+  async delete(id: string, user: UserPayload) {
+    const existingArticle = await this.prisma.article.findUnique({
+      where: { id },
+      select: { authorId: true },
+    });
+    if (!existingArticle) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
+    }
+    if (
+      user.role === UserRole.viewer ||
+      (user.role === UserRole.editor &&
+        existingArticle.authorId !== user.userId)
+    ) {
+      throw new ForbiddenException('Forbidden resource');
+    }
     try {
       const article = await this.prisma.article.delete({
         where: { id },
