@@ -14,7 +14,7 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
 
     const authHeader = request.headers.authorization;
-    console.log('authHeader', authHeader);
+
     if (authHeader?.split(' ')[0] !== 'Bearer')
       throw new UnauthorizedException('No Bearer field');
 

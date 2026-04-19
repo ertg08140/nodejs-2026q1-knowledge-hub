@@ -19,14 +19,15 @@ import { ApiSortingPagination } from '../common/apiQuery';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from 'generated/prisma/enums';
+import { RolesGuard } from 'src/auth/roles.guard';
 
 @Controller('category')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   async create(@Body() categoryDto: CategoryDto) {
     return await this.categoryService.create(categoryDto);
   }
@@ -60,7 +61,7 @@ export class CategoryController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   async update(
     @Param(
       'id',
@@ -78,7 +79,7 @@ export class CategoryController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.admin)
   @HttpCode(204)
   async delete(
     @Param(

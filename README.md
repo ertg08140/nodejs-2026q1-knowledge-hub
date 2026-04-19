@@ -28,6 +28,25 @@ After starting the app on port (4000 as default) you can open
 in your browser OpenAPI documentation by typing http://localhost:4000/doc/.
 For more information about OpenAPI/Swagger please visit https://swagger.io/.
 
+## Run application
+
+### Check procedure
+
+```
+git clone https://github.com/ertg08140/nodejs-2026q1-knowledge-hub.git
+cd nodejs-2026q1-knowledge-hub
+git checkout 06a-docker
+npm install
+.env file update
+docker-compose up --build
+```
+
+If you need to seed data, then use
+
+```
+npx prisma db seed
+```
+
 ## Testing
 
 After application running open new terminal and enter:

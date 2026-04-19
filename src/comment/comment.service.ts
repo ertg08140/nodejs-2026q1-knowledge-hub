@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -6,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { CreateCommentDto } from './dto/comment.dto';
 import { PrismaService } from 'prisma/prisma.service';
-import { Prisma } from 'generated/prisma/client';
+import { Prisma, UserRole } from 'generated/prisma/client';
+import { UserPayload } from 'src/common/decorators/user.decorator';
 
 @Injectable()
 export class CommentService {
@@ -55,7 +57,22 @@ export class CommentService {
     return comment;
   }
 
-  async delete(id: string) {
+  async delete(id: string, user: UserPayload) {
+    const existingComment = await this.prisma.comment.findUnique({
+      where: { id },
+      select: { authorId: true },
+    });
+    if (!existingComment) {
+      throw new NotFoundException(`Comment with ID ${id} not found`);
+    }
+
+    if (
+      user.role === UserRole.viewer ||
+      (user.role === UserRole.editor &&
+        existingComment.authorId !== user.userId)
+    ) {
+      throw new ForbiddenException('Forbidden resource');
+    }
     try {
       return await this.prisma.comment.delete({ where: { id } });
     } catch (error) {

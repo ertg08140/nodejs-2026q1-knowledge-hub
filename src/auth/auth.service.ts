@@ -9,6 +9,7 @@ import { AuthRefreshUserDto, AuthUserDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
 import { Prisma } from 'generated/prisma/client';
 import { JwtService } from '@nestjs/jwt';
+import type { SignOptions } from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -41,7 +42,7 @@ export class AuthService {
           throw new BadRequestException('Login already taken');
         }
       }
-      console.log('error', error);
+
       throw new InternalServerErrorException('Error creating user');
     }
   }
@@ -50,11 +51,12 @@ export class AuthService {
     return await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_SECRET_KEY,
-        expiresIn: '3d',
+        expiresIn: process.env.TOKEN_EXPIRE_TIME as SignOptions['expiresIn'],
       }),
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_SECRET_REFRESH_KEY,
-        expiresIn: '7d',
+        expiresIn: process.env
+          .TOKEN_REFRESH_EXPIRE_TIME as SignOptions['expiresIn'],
       }),
     ]);
   }
@@ -64,9 +66,9 @@ export class AuthService {
       const user = await this.prisma.user.findUnique({
         where: { login: loginUserDto.login },
       });
-      console.log('user', user);
+
       if (!user) {
-        return new ForbiddenException('Incorrect user data');
+        throw new ForbiddenException('Incorrect user data');
       }
 
       const isCorrect = await this.comparePasswords(
@@ -75,20 +77,19 @@ export class AuthService {
       );
 
       if (!isCorrect) {
-        return new ForbiddenException('Incorrect password');
+        throw new ForbiddenException('Incorrect password');
       }
 
       const payload = {
         userId: user.id,
         login: user.login,
-        role: user.role.toLocaleLowerCase(),
+        role: user.role,
       };
 
       const [accessToken, refreshToken] = await this.generateTokens(payload);
 
       return { accessToken, refreshToken };
     } catch (error) {
-      console.log('error', error);
       throw new InternalServerErrorException('Error creating user');
     }
   }
@@ -101,7 +102,7 @@ export class AuthService {
           secret: process.env.JWT_SECRET_REFRESH_KEY,
         },
       );
-      console.log('payload', userId, login, role);
+
       const [accessToken, refreshToken] = await this.generateTokens({
         userId,
         login,

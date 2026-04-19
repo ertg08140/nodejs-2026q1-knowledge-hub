@@ -1,4 +1,10 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiBody } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +28,11 @@ export class AuthController {
 
     const transformedUser = {
       ...user,
-      role: user.role.toLocaleLowerCase(),
+      role: user.role,
     };
-    return plainToInstance(UserResponseDto, transformedUser);
+    return plainToInstance(UserResponseDto, transformedUser, {
+      excludeExtraneousValues: true,
+    });
   }
 
   @Post('/login')
@@ -35,8 +43,12 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @HttpCode(200)
   @ApiBody({ type: AuthRefreshUserDto })
   async refresh(@Body() authRefreshUserDto: AuthRefreshUserDto) {
+    if (!authRefreshUserDto.refreshToken) {
+      throw new UnauthorizedException('No refresh token');
+    }
     const tokens = await this.authService.refresh(authRefreshUserDto);
     return tokens;
   }

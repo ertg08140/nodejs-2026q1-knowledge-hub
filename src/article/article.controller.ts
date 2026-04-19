@@ -32,16 +32,12 @@ export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @Roles(UserRole.admin, UserRole.editor)
   async create(
     @Body() createArticleDto: CreateArticleDto,
     @GetUser('userId') userId: string,
   ) {
-    const article = await this.articleService.create(createArticleDto, userId);
-    return {
-      ...article,
-      status: article.status.toLowerCase(),
-    };
+    return await this.articleService.create(createArticleDto, userId);
   }
 
   @Get()
@@ -51,15 +47,11 @@ export class ArticleController {
   @ApiSortingPagination()
   async findAll(@Query() query?: ArticleQueryDto) {
     const result = await this.articleService.findAll(query);
-    const transformedData = result?.data.map((article) => ({
-      ...article,
-      status: article.status.toLowerCase(),
-    }));
     if (result && Array.isArray(result.data) && result.page && result.limit) {
-      return { ...result, data: transformedData };
+      return result;
     }
 
-    return transformedData;
+    return result?.data;
   }
 
   @Get(':id')
@@ -75,15 +67,11 @@ export class ArticleController {
     )
     id: string,
   ) {
-    const article = await this.articleService.findOne(id);
-    return {
-      ...article,
-      status: article.status.toLowerCase(),
-    };
+    return await this.articleService.findOne(id);
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @Roles(UserRole.admin, UserRole.editor)
   async update(
     @Param(
       'id',
@@ -102,7 +90,7 @@ export class ArticleController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @Roles(UserRole.admin, UserRole.editor)
   @HttpCode(204)
   async delete(
     @Param(

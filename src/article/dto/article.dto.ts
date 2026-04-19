@@ -14,15 +14,15 @@ export class CreateArticleDto {
   @IsString()
   readonly content: string;
 
-  @ApiPropertyOptional({ enum: ArticleStatus, default: ArticleStatus.DRAFT })
+  @ApiPropertyOptional({ enum: ArticleStatus, default: ArticleStatus.draft })
   @IsOptional()
   @Transform(({ value }) =>
-    typeof value === 'string' ? value.toUpperCase() : value,
+    typeof value === 'string' ? value.toLowerCase() : value,
   )
   @IsEnum(ArticleStatus, {
     message: `$value is incorrect Should provide correct role - ${Object.values(ArticleStatus).join(', ')}`,
   })
-  status: ArticleStatus = ArticleStatus.DRAFT;
+  status: ArticleStatus = ArticleStatus.draft;
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
@@ -48,7 +48,7 @@ export class UpdateArticleDto extends PartialType(CreateArticleDto) {}
 export class ArticleQueryDto extends PaginationSortQueryDto {
   @IsOptional()
   @Transform(({ value }) =>
-    typeof value === 'string' ? value.toUpperCase() : value,
+    typeof value === 'string' ? value.toLowerCase() : value,
   )
   @IsEnum(ArticleStatus, {
     message: `$value is incorrect Should provide correct role - ${Object.values(ArticleStatus).join(', ')}`,

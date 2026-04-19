@@ -17,7 +17,7 @@ export class CreateUserDto {
   @IsEnum(UserRole, {
     message: `$value is incorrect Should provide correct role - ${Object.values(UserRole).join(', ')}`,
   })
-  role: UserRole = UserRole.VIEWER;
+  role: UserRole = UserRole.viewer;
 }
 
 export class UserResponseDto {

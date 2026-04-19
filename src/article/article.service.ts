@@ -147,7 +147,7 @@ export class ArticleService {
       throw new NotFoundException(`Article with ID ${id} not found`);
     }
     if (
-      user.role === UserRole.VIEWER.toLowerCase() ||
+      user.role === UserRole.viewer ||
       existingArticle.authorId !== user.userId
     ) {
       throw new ForbiddenException('Forbidden resource');
@@ -190,21 +190,21 @@ export class ArticleService {
   }
 
   async delete(id: string, user: UserPayload) {
+    const existingArticle = await this.prisma.article.findUnique({
+      where: { id },
+      select: { authorId: true },
+    });
+    if (!existingArticle) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
+    }
+    if (
+      user.role === UserRole.viewer ||
+      (user.role === UserRole.editor &&
+        existingArticle.authorId !== user.userId)
+    ) {
+      throw new ForbiddenException('Forbidden resource');
+    }
     try {
-      const existingArticle = await this.prisma.article.findUnique({
-        where: { id },
-        select: { authorId: true },
-      });
-
-      if (!existingArticle) {
-        throw new NotFoundException(`Article with ID ${id} not found`);
-      }
-      if (
-        user.role === UserRole.VIEWER.toLowerCase() ||
-        existingArticle.authorId !== user.userId
-      ) {
-        throw new ForbiddenException('Forbidden resource');
-      }
       const article = await this.prisma.article.delete({
         where: { id },
         include: {
