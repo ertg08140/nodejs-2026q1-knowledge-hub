@@ -17,19 +17,21 @@ import { CategoryDto, UpdateCategoryDto } from './dto/category.dto';
 import { PaginationSortQueryDto } from '../common/paginationQuery.Dto';
 import { ApiSortingPagination } from '../common/apiQuery';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { UserRole } from 'generated/prisma/enums';
 
 @Controller('category')
+@UseGuards(AuthGuard)
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
+  @Roles(UserRole.ADMIN)
   async create(@Body() categoryDto: CategoryDto) {
     return await this.categoryService.create(categoryDto);
   }
 
   @Get()
-  @UseGuards(AuthGuard)
   @ApiSortingPagination()
   async findAll(@Query() query: PaginationSortQueryDto) {
     const result = await this.categoryService.findAll(query);
@@ -42,7 +44,6 @@ export class CategoryController {
   }
 
   @Get(':id')
-  @UseGuards(AuthGuard)
   async findOne(
     @Param(
       'id',
@@ -59,7 +60,7 @@ export class CategoryController {
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard)
+  @Roles(UserRole.ADMIN)
   async update(
     @Param(
       'id',
@@ -77,7 +78,7 @@ export class CategoryController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
+  @Roles(UserRole.ADMIN)
   @HttpCode(204)
   async delete(
     @Param(

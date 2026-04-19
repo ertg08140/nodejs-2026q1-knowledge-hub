@@ -14,13 +14,17 @@ import {
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/comment.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { UserRole } from 'generated/prisma/enums';
 
 @Controller('comment')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.EDITOR)
   async create(@Body() createCommentDto: CreateCommentDto) {
     return await this.commentService.create(createCommentDto);
   }
@@ -58,6 +62,7 @@ export class CommentController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.EDITOR)
   @HttpCode(204)
   async delete(
     @Param(

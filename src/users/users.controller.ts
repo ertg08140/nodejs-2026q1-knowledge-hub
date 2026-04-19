@@ -25,13 +25,15 @@ import { PaginationSortQueryDto } from 'src/common/paginationQuery.Dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from 'generated/prisma/client';
+import { RolesGuard } from 'src/auth/roles.guard';
 
 @Controller('user')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.EDITOR)
   @ApiBody({ type: CreateUserDto })
   async create(@Body() createUserDto: CreateUserDto) {
     const user = await this.usersService.create(createUserDto);
@@ -41,7 +43,6 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN)
   @ApiSortingPagination()
   async findAll(@Query() query: PaginationSortQueryDto) {
     const result = await this.usersService.findAll(query);
@@ -83,7 +84,7 @@ export class UsersController {
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard)
+  @Roles(UserRole.ADMIN, UserRole.EDITOR)
   async updatePassword(
     @Param(
       'id',
@@ -102,7 +103,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
+  @Roles(UserRole.ADMIN, UserRole.EDITOR)
   @HttpCode(204)
   async delete(
     @Param(
